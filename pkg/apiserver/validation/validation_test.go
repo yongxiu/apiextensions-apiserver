@@ -21,14 +21,16 @@ import (
 	"testing"
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
-	apiextensionsfuzzer "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/fuzzer"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
+
+	apiextensionsfuzzer "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/fuzzer"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	kubeopenapispec "k8s.io/kube-openapi/pkg/validation/spec"
 )
 
@@ -134,6 +136,30 @@ func TestValidateCustomResource(t *testing.T) {
 		objects        []interface{}
 		failingObjects []failingObject
 	}{
+		{name: "map",
+			schema: apiextensions.JSONSchemaProps{
+				Properties: map[string]apiextensions.JSONSchemaProps{
+					"field": {
+						Type:     "object",
+						AdditionalProperties: &apiextensions.JSONSchemaPropsOrBool{
+							Schema: &apiextensions.JSONSchemaProps{
+								Type: "string",
+								XPreserveUnknownFields: pointer.Bool(true),
+							},
+						},
+						XPreserveUnknownFields: pointer.Bool(true),
+					},
+				},
+			},
+			objects: []interface{}{
+				map[string]interface{}{},
+				map[string]interface{}{"field": map[string]interface{}{
+					"a": "b",
+				}},
+			},
+			failingObjects: []failingObject{
+			},
+		},
 		{name: "!nullable",
 			schema: apiextensions.JSONSchemaProps{
 				Properties: map[string]apiextensions.JSONSchemaProps{
